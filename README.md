@@ -1,4 +1,5 @@
 # Threshold ECDSA JavaScript SDK 
+[![License: GPL v3](https://img.shields.io/badge/License-GPL%20v3-blue.svg)](https://www.gnu.org/licenses/gpl-3.0)
 
 JavaScript SDK for [KZen-networks/multi-party-ecdsa](https://github.com/KZen-networks/multi-party-ecdsa), a Rust implementation of {t,n}-threshold ECDSA (elliptic curve digital signature algorithm).
 
