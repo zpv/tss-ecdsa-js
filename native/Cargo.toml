@@ -1,0 +1,38 @@
+[package]
+name = "multi-party-ecdsa-bindings"
+version = "0.1.0"
+authors = ["Steven Zhao <steven@zhao.io>"]
+license = "MIT"
+build = "build.rs"
+edition = "2018"
+exclude = ["artifacts.json", "index.node"]
+
+[lib]
+name = "multi_party_ecdsa_bindings"
+crate-type = ["cdylib"]
+
+[build-dependencies]
+neon-build = "0.4.0"
+
+[dependencies]
+serde = "1.0"
+serde_json = "1.0"
+serde_derive = "1.0"
+hex = "0.4"
+reqwest = { version = "0.10.6", default-features = false, features = ["native-tls", "json", "blocking"] }
+rust-crypto = "0.2"
+libsecp256k1 = "0.3.2"
+paillier = { git = "https://github.com/KZen-networks/rust-paillier", tag = "v0.3.4"}
+zk-paillier = { git = "https://github.com/KZen-networks/zk-paillier", tag = "v0.2.9"}
+neon = "0.4.0"
+num_cpus = "1.4.0"
+
+[dependencies.multi-party-ecdsa]
+git = "https://github.com/KZen-networks/multi-party-ecdsa"
+tag = "v0.4.1"
+#branch = "master"
+
+[dependencies.curv]
+git = "https://github.com/KZen-networks/curv"
+tag = "v0.2.6"
+features = ["ec_secp256k1"]
