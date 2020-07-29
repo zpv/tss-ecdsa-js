@@ -1,3 +1,7 @@
-import bindings from './bindings';
+import { initKeygen, signMessage } from './bindings';
 
-console.log(bindings.initKeygen('http://localhost:8001', 2, 5));
+const MANAGER_URL = 'http://localhost:8001';
+
+const data = initKeygen(MANAGER_URL, 1, 2);
+console.log('Keygenned');
+console.log(signMessage(data, MANAGER_URL, '0/0/0', 1, 2, 'hello'));

@@ -1,8 +1,3 @@
-extern crate multi_party_ecdsa;
-extern crate paillier;
-extern crate reqwest;
-extern crate zk_paillier;
-
 use neon::prelude::*;
 use std::time;
 
@@ -128,7 +123,7 @@ pub fn init_keygen(mut cx: FunctionContext) -> JsResult<JsString> {
     .map(|bc1| bc1.e.clone())
     .collect::<Vec<EncryptionKey>>();
 
-  let h1_h2_N_tilde_vec = bc1_vec
+  let h1_h2_n_tilde_vec = bc1_vec
     .iter()
     .map(|bc1| bc1.dlog_statement.clone())
     .collect::<Vec<DLogStatement>>();
@@ -275,20 +270,19 @@ pub fn init_keygen(mut cx: FunctionContext) -> JsResult<JsString> {
     }
   }
   Keys::verify_dlog_proofs(&params, &dlog_proof_vec, &y_vec).expect("bad dlog proof");
-
-  let paillier_key_vec = (0..parties)
-    .map(|i| bc1_vec[i as usize].e.clone())
-    .collect::<Vec<EncryptionKey>>();
+  let pk_vec = (0..parties as usize)
+    .map(|i| dlog_proof_vec[i].pk)
+    .collect::<Vec<GE>>();
 
   let keygen_json = serde_json::to_string(&(
     party_keys,
     shared_keys,
     party_num_int,
+    pk_vec,
     vss_scheme_vec,
-    paillier_key_vec,
     y_sum,
     e_vec,
-    h1_h2_N_tilde_vec,
+    h1_h2_n_tilde_vec,
   ))
   .unwrap();
 

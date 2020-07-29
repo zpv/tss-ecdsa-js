@@ -25,6 +25,7 @@ libsecp256k1 = "0.3.2"
 paillier = { git = "https://github.com/KZen-networks/rust-paillier", tag = "v0.3.4"}
 zk-paillier = { git = "https://github.com/KZen-networks/zk-paillier", tag = "v0.2.9"}
 neon = "0.4.0"
+neon-serde = "0.4.0"
 num_cpus = "1.4.0"
 
 [dependencies.multi-party-ecdsa]

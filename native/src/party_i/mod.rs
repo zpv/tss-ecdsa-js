@@ -8,7 +8,9 @@ use crypto::{
   aes_gcm::AesGcm,
 };
 
+pub mod hd_keys;
 pub mod keygen;
+pub mod sign;
 
 pub type Key = String;
 
