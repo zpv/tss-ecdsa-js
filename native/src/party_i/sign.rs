@@ -643,7 +643,7 @@ pub fn sign_message(mut cx: FunctionContext) -> JsResult<JsString> {
   });
 
   println!("{}", ret_dict.to_string());
-  Ok(cx.string("hi"))
+  Ok(cx.string(ret_dict.to_string()))
 }
 
 fn format_vec_from_reads<'a, T: serde::Deserialize<'a> + Clone>(

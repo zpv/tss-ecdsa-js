@@ -3,8 +3,15 @@ extern crate curv;
 use curv::arithmetic::traits::Converter;
 use curv::cryptographic_primitives::hashing::hmac_sha512;
 use curv::cryptographic_primitives::hashing::traits::KeyedHash;
+use curv::cryptographic_primitives::secret_sharing::feldman_vss::VerifiableSS;
 use curv::elliptic::curves::traits::*;
 use curv::{BigInt, FE, GE};
+use multi_party_ecdsa::protocols::multi_party_ecdsa::gg_2020::party_i::*;
+use paillier::*;
+use serde_json::json;
+use zk_paillier::zkproofs::DLogStatement;
+
+use neon::prelude::*;
 
 pub fn get_hd_key(y_sum: &GE, path_vector: Vec<BigInt>) -> (GE, FE) {
   // generate a random but shared chain code, this will do
@@ -62,4 +69,40 @@ pub fn hd_key(
         (acc.0 + g * &f_l_fe, f_l_fe + &acc.1, &acc.2 * &f_r_fe)
       });
   (public_key_new_child, f_l_new, cc_new)
+}
+
+pub fn get_pubkey(mut cx: FunctionContext) -> JsResult<JsString> {
+  let js_arr_handle = cx.argument::<JsValue>(0)?;
+  let path = cx.argument::<JsString>(1)?.value() as String;
+
+  let (_, _, _, _, _, y_sum, _, _): (
+    Keys,
+    SharedKeys,
+    u16,
+    Vec<GE>,
+    Vec<VerifiableSS>,
+    GE,
+    Vec<EncryptionKey>,
+    Vec<DLogStatement>,
+  ) = neon_serde::from_value(&mut cx, js_arr_handle)?;
+
+  let (_, y_sum) = match path.is_empty() {
+    true => (ECScalar::zero(), y_sum),
+    false => {
+      let path_vector: Vec<BigInt> = path
+        .split('/')
+        .map(|s| s.trim().parse::<BigInt>().unwrap())
+        .collect();
+      let (y_sum_child, f_l_new) = get_hd_key(&y_sum, path_vector.clone());
+      (f_l_new, y_sum_child.clone())
+    }
+  };
+
+  let ret_dict = json!({
+      "x": &y_sum.x_coor(),
+      "y": &y_sum.y_coor(),
+      "path": path,
+  });
+
+  Ok(cx.string(ret_dict.to_string()))
 }

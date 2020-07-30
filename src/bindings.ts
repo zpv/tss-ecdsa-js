@@ -7,9 +7,7 @@ export const initKeygen = (
   server: string,
   threshold: number,
   parties: number
-) => {
-  return JSON.parse(bindings.initKeygen(server, threshold, parties));
-};
+) => JSON.parse(bindings.initKeygen(server, threshold, parties));
 
 export const signMessage = (
   keydata: any,
@@ -18,13 +16,10 @@ export const signMessage = (
   threshold: number,
   parties: number,
   message: string
-) => {
-  return bindings.signMessage(
-    keydata,
-    server,
-    path,
-    threshold,
-    parties,
-    message
+) =>
+  JSON.parse(
+    bindings.signMessage(keydata, server, path, threshold, parties, message)
   );
-};
+
+export const getPubkey = (keydata: any, path: string) =>
+  JSON.parse(bindings.getPubkey(keydata, path));
