@@ -3,7 +3,7 @@ import { threadId } from 'worker_threads';
 const path = require('path');
 const bindings: any = require(path.join(__dirname, '../native'));
 
-export const initKeygen = (
+export const initKeygen = async (
   server: string,
   threshold: number,
   parties: number
@@ -17,9 +17,22 @@ export const signMessage = (
   parties: number,
   message: string
 ) =>
-  JSON.parse(
-    bindings.signMessage(keydata, server, path, threshold, parties, message)
-  );
+  new Promise((resolve, reject) => {
+    bindings.signMessage(
+      keydata,
+      server,
+      path,
+      threshold,
+      parties,
+      message,
+      (err, val) => {
+        if (err) return reject(err);
+        resolve(JSON.parse(val));
+      }
+    );
+  });
 
 export const getPubkey = (keydata: any, path: string) =>
   JSON.parse(bindings.getPubkey(keydata, path));
+
+export const asyncTask = bindings.asyncTask;

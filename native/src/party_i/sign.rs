@@ -20,31 +20,61 @@ use crate::party_i::{
   broadcast, hd_keys, poll_for_broadcasts, poll_for_p2p, sendp2p, Params, PartySignup,
 };
 
-pub fn sign_message(mut cx: FunctionContext) -> JsResult<JsString> {
+struct SignMessageTask {
+  addr: String,
+  path: String,
+  threshold: u16,
+  parties: u16,
+  message: String,
+  party_keys: Keys,
+  shared_keys: SharedKeys,
+  party_id: u16,
+  pk_vec: Vec<GE>,
+  vss_scheme_vec: Vec<VerifiableSS>,
+  y_sum: GE,
+  ek_vec: Vec<EncryptionKey>,
+  dlog_statement_vec: Vec<DLogStatement>,
+}
+
+impl Task for SignMessageTask {
+  type Output = String;
+  type Error = ();
+  type JsEvent = JsString;
+
+  fn perform(&self) -> Result<Self::Output, Self::Error> {
+    Ok(sign_message(
+      self.addr.clone(),
+      self.path.clone(),
+      self.threshold,
+      self.parties,
+      self.message.clone(),
+      self.party_keys.clone(),
+      self.shared_keys.clone(),
+      self.party_id,
+      self.pk_vec.clone(),
+      &mut self.vss_scheme_vec.clone(),
+      &self.y_sum,
+      self.ek_vec.clone(),
+      self.dlog_statement_vec.clone(),
+    ))
+  }
+  fn complete(
+    self,
+    mut cx: TaskContext,
+    result: Result<Self::Output, ()>,
+  ) -> JsResult<Self::JsEvent> {
+    Ok(cx.string(result.unwrap()))
+  }
+}
+
+pub fn sign_message_task(mut cx: FunctionContext) -> JsResult<JsUndefined> {
   let js_arr_handle = cx.argument::<JsValue>(0)?;
-
-  println!("hello!1");
-
   let addr = cx.argument::<JsString>(1)?.value() as String;
-  println!("hello!2");
-
-  println!("{:?}", cx.argument::<JsString>(2)?.value());
-
   let path = cx.argument::<JsString>(2)?.value() as String;
-  println!("hello!3");
-
   let threshold = cx.argument::<JsNumber>(3)?.value() as u16;
-  println!("hello!4");
-
   let parties = cx.argument::<JsNumber>(4)?.value() as u16;
-  println!("hello!5");
-
   let message = cx.argument::<JsString>(5)?.value() as String;
-  println!("hello!6");
-
-  let sign_at_path = !path.is_empty();
-
-  println!("hello!");
+  let f = cx.argument::<JsFunction>(6)?;
 
   let (
     party_keys,
@@ -65,10 +95,48 @@ pub fn sign_message(mut cx: FunctionContext) -> JsResult<JsString> {
     Vec<EncryptionKey>,
     Vec<DLogStatement>,
   ) = neon_serde::from_value(&mut cx, js_arr_handle)?;
+
+  SignMessageTask {
+    addr: addr,
+    path: path,
+    threshold: threshold,
+    parties: parties,
+    message: message,
+    ek_vec: ek_vec,
+    party_id: party_id,
+    pk_vec: pk_vec,
+    vss_scheme_vec: vss_scheme_vec,
+    y_sum: y_sum,
+    shared_keys: shared_keys,
+    party_keys: party_keys,
+    dlog_statement_vec: dlog_statement_vec,
+  }
+  .schedule(f);
+  Ok(cx.undefined())
+}
+
+pub fn sign_message(
+  addr: String,
+  path: String,
+  threshold: u16,
+  parties: u16,
+  message: String,
+  party_keys: Keys,
+  shared_keys: SharedKeys,
+  party_id: u16,
+  pk_vec: Vec<GE>,
+  vss_scheme_vec: &mut Vec<VerifiableSS>,
+  y_sum: &GE,
+  ek_vec: Vec<EncryptionKey>,
+  dlog_statement_vec: Vec<DLogStatement>,
+) -> String {
+  let sign_at_path = !path.is_empty();
+
+  println!("hello!");
   println!(":68");
 
   let (f_l_new, y_sum) = match path.is_empty() {
-    true => (ECScalar::zero(), y_sum),
+    true => (ECScalar::zero(), *y_sum),
     false => {
       let path_vector: Vec<BigInt> = path
         .split('/')
@@ -580,10 +648,10 @@ pub fn sign_message(mut cx: FunctionContext) -> JsResult<JsString> {
     Ok(x) => x,
     Err(_e) => message.as_bytes().to_vec(),
   };
+
   let message = &message[..];
 
   let message_bn = BigInt::from(message);
-  //    println!("message_bn INT: {}", message_bn);
   let message_int = BigInt::from(message);
   let two = BigInt::from(2);
   let message_bn = message_bn.modulus(&two.pow(256));
@@ -643,7 +711,7 @@ pub fn sign_message(mut cx: FunctionContext) -> JsResult<JsString> {
   });
 
   println!("{}", ret_dict.to_string());
-  Ok(cx.string(ret_dict.to_string()))
+  return ret_dict.to_string();
 }
 
 fn format_vec_from_reads<'a, T: serde::Deserialize<'a> + Clone>(

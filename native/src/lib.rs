@@ -28,5 +28,6 @@ pub fn perform_async_task(mut cx: FunctionContext) -> JsResult<JsUndefined> {
 register_module!(mut cx, {
     cx.export_function("initKeygen", party_i::keygen::init_keygen)?;
     cx.export_function("getPubkey", party_i::hd_keys::get_pubkey)?;
-    cx.export_function("signMessage", party_i::sign::sign_message)
+    cx.export_function("asyncTask", perform_async_task)?;
+    cx.export_function("signMessage", party_i::sign::sign_message_task)
 });
