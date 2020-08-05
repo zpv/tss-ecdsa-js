@@ -22,13 +22,48 @@ use crate::party_i::{
   PartySignup, AEAD,
 };
 
-// One Round Threshold ECDSA with Identifiable Abort: R Gennaro, S Goldfeder https://ia.cr/2020/540
+struct KeygenTask {
+  addr: String,
+  threshold: u16,
+  parties: u16,
+}
 
-pub fn init_keygen(mut cx: FunctionContext) -> JsResult<JsString> {
+impl Task for KeygenTask {
+  type Output = String;
+  type Error = ();
+  type JsEvent = JsString;
+
+  fn perform(&self) -> Result<Self::Output, Self::Error> {
+    Ok(run_keygen(self.addr.clone(), self.threshold, self.parties))
+  }
+  fn complete(
+    self,
+    mut cx: TaskContext,
+    result: Result<Self::Output, ()>,
+  ) -> JsResult<Self::JsEvent> {
+    Ok(cx.string(result.unwrap()))
+  }
+}
+
+pub fn keygen_task(mut cx: FunctionContext) -> JsResult<JsUndefined> {
   let addr = cx.argument::<JsString>(0)?.value() as String;
   let threshold = cx.argument::<JsNumber>(1)?.value() as u16;
   let parties = cx.argument::<JsNumber>(2)?.value() as u16;
+  let f = cx.argument::<JsFunction>(3)?;
 
+  KeygenTask {
+    addr: addr,
+    threshold: threshold,
+    parties: parties,
+  }
+  .schedule(f);
+
+  Ok(cx.undefined())
+}
+
+// One Round Threshold ECDSA with Identifiable Abort: R Gennaro, S Goldfeder https://ia.cr/2020/540
+
+pub fn run_keygen(addr: String, threshold: u16, parties: u16) -> String {
   println!("addr: {:?}", addr);
 
   let client = Client::new();
@@ -286,7 +321,7 @@ pub fn init_keygen(mut cx: FunctionContext) -> JsResult<JsString> {
   ))
   .unwrap();
 
-  Ok(cx.string(keygen_json))
+  return keygen_json;
 }
 
 pub fn keygen_signup(addr: &String, client: &Client, params: &Params) -> Result<PartySignup, ()> {

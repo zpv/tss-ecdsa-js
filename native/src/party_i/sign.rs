@@ -75,6 +75,7 @@ pub fn sign_message_task(mut cx: FunctionContext) -> JsResult<JsUndefined> {
   let parties = cx.argument::<JsNumber>(4)?.value() as u16;
   let message = cx.argument::<JsString>(5)?.value() as String;
   let f = cx.argument::<JsFunction>(6)?;
+  println!("scheduling!!");
 
   let (
     party_keys,
@@ -132,9 +133,6 @@ pub fn sign_message(
 ) -> String {
   let sign_at_path = !path.is_empty();
 
-  println!("hello!");
-  println!(":68");
-
   let (f_l_new, y_sum) = match path.is_empty() {
     true => (ECScalar::zero(), *y_sum),
     false => {
@@ -146,7 +144,6 @@ pub fn sign_message(
       (f_l_new, y_sum_child.clone())
     }
   };
-  println!(":81");
 
   let client = Client::new();
   let delay = time::Duration::from_millis(25);
@@ -160,8 +157,6 @@ pub fn sign_message(
   let (party_num_int, uuid) = match signup(&addr, &client, &params).unwrap() {
     PartySignup { number, uuid } => (number, uuid),
   };
-  println!("number: {:?}, uuid: {:?}", party_num_int, uuid);
-  println!(":96");
 
   // round 0: collect signers IDs
   assert!(broadcast(
@@ -183,8 +178,6 @@ pub fn sign_message(
     "round0",
     uuid.clone(),
   );
-
-  println!(":119");
 
   let mut j = 0;
   let mut signers_vec: Vec<usize> = Vec::new();
@@ -253,8 +246,6 @@ pub fn sign_message(
   let (com, decommit) = sign_keys.phase1_broadcast();
   let m_a_k = MessageA::a(&sign_keys.k_i, &party_keys.ek);
 
-  println!(":187");
-
   assert!(broadcast(
     &addr,
     &client,
@@ -279,21 +270,12 @@ pub fn sign_message(
   let mut bc1_vec: Vec<SignBroadcastPhase1> = Vec::new();
   let mut m_a_vec: Vec<MessageA> = Vec::new();
 
-  println!(":212");
-
   for i in 1..threshold + 2 {
     if i == party_num_int {
       bc1_vec.push(com.clone());
     //   m_a_vec.push(m_a_k.clone());
     } else {
       //     if signers_vec.contains(&(i as usize)) {
-      println!("Unpacking {:?}", i);
-      println!("Unpacking {:?}", &round1_ans_vec[j]);
-
-      println!(
-        "{:?}",
-        serde_json::from_str::<(SignBroadcastPhase1, MessageA)>(&round1_ans_vec[j])
-      );
 
       let (bc1_j, m_a_party_j): (SignBroadcastPhase1, MessageA) =
         serde_json::from_str(&round1_ans_vec[j]).unwrap();
@@ -459,14 +441,10 @@ pub fn sign_message(
     uuid.clone(),
   );
 
-  println!(":397");
-
   let mut T_vec: Vec<GE> = Vec::new();
   format_vec_from_reads(&round3b_ans_vec, party_num_int as usize, T_i, &mut T_vec);
 
   // Phase 4: Decommit to gamma_i
-
-  println!(":377");
 
   assert!(broadcast(
     &addr,
@@ -487,8 +465,6 @@ pub fn sign_message(
     uuid.clone(),
   );
 
-  println!(":397");
-
   let mut decommit_vec: Vec<SignDecommitPhase1> = Vec::new();
   format_vec_from_reads(
     &round4_ans_vec,
@@ -497,17 +473,11 @@ pub fn sign_message(
     &mut decommit_vec,
   );
 
-  println!(":407");
-
   // let decomm_i = decommit_vec.remove((party_num_int - 1) as usize);
   // bc1_vec.remove((party_num_int - 1) as usize);
-  println!(":412");
-  println!(":LEN! {:?}", m_b_gamma_rec_vec.len());
   let b_proof_vec = (0..m_b_gamma_rec_vec.len())
     .map(|i| &m_b_gamma_rec_vec[i].b_proof)
     .collect::<Vec<&DLogProof>>();
-  println!(":416");
-  println!("len {:?}", b_proof_vec.len());
 
   let R = SignKeys::phase4(
     &delta_inv,
@@ -517,7 +487,6 @@ pub fn sign_message(
     (party_num_int - 1) as usize,
   )
   .expect("bad gamma_i decommit");
-  println!(":426");
 
   let R_dash = R * sign_keys.k_i;
 
@@ -602,8 +571,6 @@ pub fn sign_message(
   let S_i_and_proof =
     LocalSignature::phase6_compute_S_i_and_proof_of_consistency(&R, &T_i, &sigma, &l_i);
 
-  println!(":511");
-
   assert!(broadcast(
     &addr,
     &client,
@@ -614,8 +581,6 @@ pub fn sign_message(
   )
   .is_ok());
 
-  println!(":523");
-
   let round6_ans_vec = poll_for_broadcasts(
     &addr,
     &client,
@@ -625,8 +590,6 @@ pub fn sign_message(
     "round6",
     uuid.clone(),
   );
-
-  println!(":536");
 
   let mut phase6_tuple_vec: Vec<(GE, HomoELGamalProof)> = Vec::new();
   format_vec_from_reads(
@@ -641,8 +604,6 @@ pub fn sign_message(
     .expect("Proof verification failed");
 
   LocalSignature::phase6_check_S_i_sum(&y_sum, &S_vec).expect("S_i checksum failed");
-
-  println!(":545");
 
   let message = match hex::decode(message.clone()) {
     Ok(x) => x,
@@ -678,8 +639,6 @@ pub fn sign_message(
     uuid.clone(),
   );
 
-  println!(":536");
-
   let mut local_sig_vec: Vec<LocalSignature> = Vec::new();
   format_vec_from_reads(
     &round7_ans_vec,
@@ -710,7 +669,6 @@ pub fn sign_message(
       "msg_int": message_int,
   });
 
-  println!("{}", ret_dict.to_string());
   return ret_dict.to_string();
 }
 
