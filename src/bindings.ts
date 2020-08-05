@@ -13,13 +13,10 @@ export const initKeygen = async (
   parties: number
 ) =>
   new Promise((resolve, reject) => {
-    console.log('called!');
-    // timeout(Math.random() * 2000).then(() =>
     bindings.initKeygen(server, threshold, parties, (err, val) => {
       if (err) return reject(err);
       resolve(JSON.parse(val));
     });
-    // );
   });
 
 export const signMessage = (
@@ -31,20 +28,17 @@ export const signMessage = (
   message: string
 ) =>
   new Promise((resolve, reject) => {
-    console.log('called sign!');
-    timeout(Math.random() * 2000).then(() =>
-      bindings.signMessage(
-        keydata,
-        server,
-        path,
-        threshold,
-        parties,
-        message,
-        (err, val) => {
-          if (err) return reject(err);
-          resolve(JSON.parse(val));
-        }
-      )
+    bindings.signMessage(
+      keydata,
+      server,
+      path,
+      threshold,
+      parties,
+      message,
+      (err, val) => {
+        if (err) return reject(err);
+        resolve(JSON.parse(val));
+      }
     );
   });
 
