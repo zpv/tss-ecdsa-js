@@ -1,6 +1,11 @@
 import { expect } from 'chai';
 import { compressPubkey, range } from '../src/utils';
-import { signMessage, getPubkey, initKeygen } from '../src/bindings';
+import {
+  signMessage,
+  getPubkey,
+  initKeygen,
+  getCompressedPubkey,
+} from '../src/bindings';
 import * as BN from 'bn.js';
 import * as ec from 'secp256k1';
 import 'mocha';
@@ -13,6 +18,8 @@ for (let n = 2; n < 15; n++) {
     testScheme(t, n, '0/1/3');
   }
 }
+
+// testScheme(49, 50, '0/1/2');
 
 function testScheme(t, n, path) {
   describe(`${t + 1}-of-${n} Signature Scheme`, function () {
@@ -46,12 +53,7 @@ function testScheme(t, n, path) {
         )
       );
 
-      const pubkey = await getPubkey(keys[0], path);
-
-      let x = new BN(pubkey.x, 16, 'be').toArrayLike(Buffer, 'be', 32);
-      let y = new BN(pubkey.y, 16, 'be').toArrayLike(Buffer, 'be', 32);
-
-      const compressedPubkey = compressPubkey(x, y);
+      const compressedPubkey = await getCompressedPubkey(keys[0], path);
 
       signatures.forEach((signature) => {
         expect(signature).to.deep.equal(signatures[0]);
