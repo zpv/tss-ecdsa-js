@@ -1,4 +1,5 @@
-import { threadId } from 'worker_threads';
+import * as BN from 'bn.js';
+import { compressPubkey } from './utils';
 
 const path = require('path');
 const bindings: any = require(path.join(__dirname, '../native'));
@@ -42,5 +43,15 @@ export const signMessage = (
     );
   });
 
-export const getPubkey = (keydata: any, path: string) =>
-  JSON.parse(bindings.getPubkey(keydata, path));
+export const getPubkey = (keydata: any, path: string) => {
+  const pubkey = JSON.parse(bindings.getPubkey(keydata, path));
+  const x: Buffer = new BN(pubkey.x, 16, 'be').toArrayLike(Buffer, 'be', 32);
+  const y: Buffer = new BN(pubkey.y, 16, 'be').toArrayLike(Buffer, 'be', 32);
+
+  return { x, y, path: pubkey.path };
+};
+
+export const getCompressedPubkey = (keydata: any, path: string) => {
+  const pubkey = getPubkey(keydata, path);
+  return compressPubkey(pubkey.x, pubkey.y);
+};
