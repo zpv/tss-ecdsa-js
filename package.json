@@ -25,7 +25,7 @@
   },
   "scripts": {
     "dev": "ts-node-dev src/index.ts",
-    "test": "mocha --no-timeouts -r ts-node/register tests/**/*.spec.ts",
+    "test": "UV_THREADPOOL_SIZE=120 mocha --no-timeouts -r ts-node/register tests/**/*.spec.ts",
     "coverage": "nyc -r lcov -e .ts -x \"*.test.ts\" npm run test",
     "build-rust": "neon build -r"
   },
