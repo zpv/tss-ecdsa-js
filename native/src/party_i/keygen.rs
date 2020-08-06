@@ -219,8 +219,6 @@ pub fn run_keygen(addr: String, threshold: u16, parties: u16) -> Result<String, 
     }
   }
 
-  println!("completed p2p send: {}", party_num_int);
-
   let round3_ans_vec = poll_for_p2p(
     &addr,
     &client,
@@ -230,8 +228,6 @@ pub fn run_keygen(addr: String, threshold: u16, parties: u16) -> Result<String, 
     "round3",
     uuid.clone(),
   );
-
-  println!("completed p2p poll: {}", party_num_int);
 
   let mut j = 0;
   let mut party_shares: Vec<FE> = Vec::new();
