@@ -38,11 +38,11 @@ struct SignMessageTask {
 
 impl Task for SignMessageTask {
   type Output = String;
-  type Error = ();
+  type Error = String;
   type JsEvent = JsString;
 
   fn perform(&self) -> Result<Self::Output, Self::Error> {
-    Ok(sign_message(
+    match sign_message(
       self.addr.clone(),
       self.path.clone(),
       self.threshold,
@@ -56,14 +56,20 @@ impl Task for SignMessageTask {
       &self.y_sum,
       self.ek_vec.clone(),
       self.dlog_statement_vec.clone(),
-    ))
+    ) {
+      Ok(x) => Ok(x),
+      Err(e) => Err(e),
+    }
   }
   fn complete(
     self,
     mut cx: TaskContext,
-    result: Result<Self::Output, ()>,
+    result: Result<Self::Output, Self::Error>,
   ) -> JsResult<Self::JsEvent> {
-    Ok(cx.string(result.unwrap()))
+    match result {
+      Ok(x) => Ok(cx.string(x)),
+      Err(e) => cx.throw_error(format!("SignTask Error - {:?}", e)),
+    }
   }
 }
 
@@ -75,7 +81,6 @@ pub fn sign_message_task(mut cx: FunctionContext) -> JsResult<JsUndefined> {
   let parties = cx.argument::<JsNumber>(4)?.value() as u16;
   let message = cx.argument::<JsString>(5)?.value() as String;
   let f = cx.argument::<JsFunction>(6)?;
-  println!("scheduling!!");
 
   let (
     party_keys,
@@ -130,7 +135,7 @@ pub fn sign_message(
   y_sum: &GE,
   ek_vec: Vec<EncryptionKey>,
   dlog_statement_vec: Vec<DLogStatement>,
-) -> String {
+) -> Result<String, String> {
   let sign_at_path = !path.is_empty();
 
   let (f_l_new, y_sum) = match path.is_empty() {
@@ -286,7 +291,11 @@ pub fn sign_message(
       //       }
     }
   }
-  assert_eq!(signers_vec.len(), bc1_vec.len());
+  assert_eq!(
+    signers_vec.len(),
+    bc1_vec.len(),
+    "bc_vec and signers_vec length unequal"
+  );
 
   // Phase 2: Perform MtA share conversion subprotocol
 
@@ -319,16 +328,20 @@ pub fn sign_message(
   let mut j = 0;
   for i in 1..threshold + 2 {
     if i != party_num_int {
-      assert!(sendp2p(
-        &addr,
-        &client,
-        party_num_int.clone(),
-        i.clone(),
-        "round2",
-        serde_json::to_string(&(m_b_gamma_send_vec[j].clone(), m_b_w_send_vec[j].clone())).unwrap(),
-        uuid.clone(),
-      )
-      .is_ok());
+      assert!(
+        sendp2p(
+          &addr,
+          &client,
+          party_num_int.clone(),
+          i.clone(),
+          "round2",
+          serde_json::to_string(&(m_b_gamma_send_vec[j].clone(), m_b_w_send_vec[j].clone()))
+            .unwrap(),
+          uuid.clone(),
+        )
+        .is_ok(),
+        "round2 - sendp2p failed"
+      );
       j = j + 1;
     }
   }
@@ -382,9 +395,7 @@ pub fn sign_message(
         signers_vec[(i - 1) as usize],
         &signers_vec,
       );
-      //println!("Verifying client {}", party_num_int);
       assert_eq!(m_b.b_proof.pk.clone(), g_w_i);
-      //println!("Verified client {}", party_num_int);
       j = j + 1;
     }
   }
@@ -393,15 +404,18 @@ pub fn sign_message(
   let delta_i = sign_keys.phase2_delta_i(&alpha_vec, &beta_vec);
   let sigma = sign_keys.phase2_sigma_i(&miu_vec, &ni_vec);
 
-  assert!(broadcast(
-    &addr,
-    &client,
-    party_num_int,
-    "round3",
-    serde_json::to_string(&delta_i).unwrap(),
-    uuid.clone(),
-  )
-  .is_ok());
+  assert!(
+    broadcast(
+      &addr,
+      &client,
+      party_num_int,
+      "round3",
+      serde_json::to_string(&delta_i).unwrap(),
+      uuid.clone(),
+    )
+    .is_ok(),
+    "round 3 broadcast failed"
+  );
   let round3_ans_vec = poll_for_broadcasts(
     &addr,
     &client,
@@ -669,7 +683,7 @@ pub fn sign_message(
       "msg_int": message_int,
   });
 
-  return ret_dict.to_string();
+  return Ok(ret_dict.to_string());
 }
 
 fn format_vec_from_reads<'a, T: serde::Deserialize<'a> + Clone>(
