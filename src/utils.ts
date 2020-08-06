@@ -1,4 +1,4 @@
-export const compressPubkey = (x, y) => {
+export const compressPubkey = (x: Buffer, y: Buffer) => {
   const odd = y[y.length - 1] & 1;
   const buf = Buffer.alloc(33);
   buf[0] = odd ? 0x03 : 0x02;
