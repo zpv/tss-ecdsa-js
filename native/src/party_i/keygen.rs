@@ -30,18 +30,24 @@ struct KeygenTask {
 
 impl Task for KeygenTask {
   type Output = String;
-  type Error = ();
+  type Error = String;
   type JsEvent = JsString;
 
   fn perform(&self) -> Result<Self::Output, Self::Error> {
-    Ok(run_keygen(self.addr.clone(), self.threshold, self.parties))
+    match run_keygen(self.addr.clone(), self.threshold, self.parties) {
+      Ok(x) => Ok(x),
+      Err(e) => Err(e),
+    }
   }
   fn complete(
     self,
     mut cx: TaskContext,
-    result: Result<Self::Output, ()>,
+    result: Result<Self::Output, Self::Error>,
   ) -> JsResult<Self::JsEvent> {
-    Ok(cx.string(result.unwrap()))
+    match result {
+      Ok(x) => Ok(cx.string(x)),
+      Err(e) => cx.throw_error(format!("SignTask Error - {:?}", e)),
+    }
   }
 }
 
@@ -63,7 +69,7 @@ pub fn keygen_task(mut cx: FunctionContext) -> JsResult<JsUndefined> {
 
 // One Round Threshold ECDSA with Identifiable Abort: R Gennaro, S Goldfeder https://ia.cr/2020/540
 
-pub fn run_keygen(addr: String, threshold: u16, parties: u16) -> String {
+pub fn run_keygen(addr: String, threshold: u16, parties: u16) -> Result<String, String> {
   println!("addr: {:?}", addr);
 
   let client = Client::new();
@@ -125,7 +131,8 @@ pub fn run_keygen(addr: String, threshold: u16, parties: u16) -> String {
     serde_json::to_string(&decom_i).unwrap(),
     uuid.clone(),
   )
-  .is_ok());
+  .is_ok(),);
+
   let round2_ans_vec = poll_for_broadcasts(
     &addr,
     &client,
@@ -191,20 +198,28 @@ pub fn run_keygen(addr: String, threshold: u16, parties: u16) -> String {
       // prepare encrypted ss for party i:
       let key_i = BigInt::to_vec(&enc_keys[j]);
       let plaintext = BigInt::to_vec(&secret_shares[k].to_big_int());
+
       let aead_pack_i = aes_encrypt(&key_i, &plaintext);
-      assert!(sendp2p(
-        &addr,
-        &client,
-        party_num_int,
-        i,
-        "round3",
-        serde_json::to_string(&aead_pack_i).unwrap(),
-        uuid.clone(),
-      )
-      .is_ok());
+
+      assert!(
+        sendp2p(
+          &addr,
+          &client,
+          party_num_int,
+          i,
+          "round3",
+          serde_json::to_string(&aead_pack_i).unwrap(),
+          uuid.clone(),
+        )
+        .is_ok(),
+        "p2p send failed"
+      );
+
       j += 1;
     }
   }
+
+  println!("completed p2p send: {}", party_num_int);
 
   let round3_ans_vec = poll_for_p2p(
     &addr,
@@ -215,6 +230,8 @@ pub fn run_keygen(addr: String, threshold: u16, parties: u16) -> String {
     "round3",
     uuid.clone(),
   );
+
+  println!("completed p2p poll: {}", party_num_int);
 
   let mut j = 0;
   let mut party_shares: Vec<FE> = Vec::new();
@@ -321,7 +338,7 @@ pub fn run_keygen(addr: String, threshold: u16, parties: u16) -> String {
   ))
   .unwrap();
 
-  return keygen_json;
+  return Ok(keygen_json);
 }
 
 pub fn keygen_signup(addr: &String, client: &Client, params: &Params) -> Result<PartySignup, ()> {
